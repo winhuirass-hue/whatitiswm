@@ -133,8 +133,10 @@ void ImGuiWM::handle_configure_request(XConfigureRequestEvent& ev)
     Client* c = find_client(ev.window);
     if (c && !c->floating) {
         // Tiled: honour size hints but ignore position
-        XConfigureWindow(m_dpy, ev.window, CWWidth | CWHeight,
-            &(XWindowChanges){.width = c->w, .height = c->h});
+        XWindowChanges twc{};
+        twc.width  = c->w;
+        twc.height = c->h;
+        XConfigureWindow(m_dpy, ev.window, CWWidth | CWHeight, &twc);
         return;
     }
 
