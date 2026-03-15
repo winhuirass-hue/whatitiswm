@@ -257,8 +257,6 @@ void ImGuiWM::tile_workspace(Workspace& ws)
 {
     const int bar   = 30;
     const int gap   = 4;
-    auto visible = [](Client* c){ return !c->minimized; };
-
     std::vector<Client*> tv;
     for (auto* c : ws.clients)
         if (!c->minimized) tv.push_back(c);

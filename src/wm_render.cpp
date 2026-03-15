@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <cstdlib>
+#include <unistd.h>
 #include <algorithm>
 
 // GLX_EXT_texture_from_pixmap constants (may not be in older headers)
@@ -236,7 +238,7 @@ void ImGuiWM::render_client_window(Client& c)
         ImGuiWindowFlags_NoScrollbar      |
         ImGuiWindowFlags_NoScrollWithMouse|
         ImGuiWindowFlags_NoSavedSettings  |
-        ImGuiWindowFlags_NoBringToDisplayFront;
+        ImGuiWindowFlags_NoBringToFrontOnFocus;
 
     // Focused highlight
     if (c.focused) {
@@ -321,7 +323,7 @@ void ImGuiWM::render_taskbar()
         ImGuiWindowFlags_NoDecoration        |
         ImGuiWindowFlags_NoMove              |
         ImGuiWindowFlags_NoScrollWithMouse   |
-        ImGuiWindowFlags_NoBringToDisplayFront |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoSavedSettings;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 4));

@@ -140,7 +140,7 @@ void ImGuiWM::handle_configure_request(XConfigureRequestEvent& ev)
         return;
     }
 
-    XWindowChanges wc;
+    XWindowChanges wc{};   // zero-init all fields first
     wc.x            = ev.x;
     wc.y            = ev.y;
     wc.width        = ev.width;
@@ -180,7 +180,6 @@ void ImGuiWM::handle_key_press(XKeyEvent& ev)
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::handle_button_press(XButtonEvent& ev)
 {
-    // Button1 on root → focus
     Client* c = find_client(ev.window);
     if (c) {
         focus(c);
@@ -247,9 +246,9 @@ void ImGuiWM::begin_drag(Client* c, int rx, int ry, bool resize)
 void ImGuiWM::update_drag(int rx, int ry)
 {
     if (!m_drag.active || !m_drag.client) return;
-    Client* c   = m_drag.client;
-    int     dx  = rx - m_drag.start_root_x;
-    int     dy  = ry - m_drag.start_root_y;
+    Client* c  = m_drag.client;
+    int     dx = rx - m_drag.start_root_x;
+    int     dy = ry - m_drag.start_root_y;
 
     if (m_drag.resize) {
         c->w = std::max(100, m_drag.start_cw + dx);

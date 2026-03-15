@@ -14,11 +14,11 @@
 
 static ImGuiWM* g_wm = nullptr;
 
-static void handle_signal(int sig) {
+static void handle_signal(int /*sig*/) {
     if (g_wm) g_wm->request_quit();
 }
 
-int main(int argc, char** argv) {
+int main(int /*argc*/, char** /*argv*/) {
     signal(SIGTERM, handle_signal);
     signal(SIGINT,  handle_signal);
 
