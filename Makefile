@@ -5,7 +5,7 @@ CXXFLAGS := -std=c++17 -O2 -Wall -Wextra \
              -Ithird_party/imgui/backends \
              $(shell pkg-config --cflags x11 xcomposite xdamage xrender xfixes gl)
 
-LDFLAGS := $(shell pkg-config --libs ...) \
+LDFLAGS := $(shell pkg-config --libs x11 xcomposite xdamage xrender xfixes gl) \
             -lX11 -lXext -lXcomposite -lXdamage -lXrender -lXfixes \
             -lGL -lGLX -ldl
 
@@ -30,7 +30,9 @@ TARGET := imgui-wm
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ \
+        -Wl, --start-group $(OBJS) -Wl, --end-group \
+        $(LDFLAGS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
