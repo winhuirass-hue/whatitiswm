@@ -14,7 +14,7 @@ OpenGL-backed composite overlay.
 | Workspaces | 8 virtual desktops |
 | Key bindings | Super+key (see table below) |
 | Taskbar | Workspace buttons, window list, layout toggle, clock |
-| Launcher | Super+L → mini command bar |
+| Launcher | Alt+L → mini command bar |
 | Decorations | Per-window title bar with close / max / min buttons |
 
 ## Dependencies
