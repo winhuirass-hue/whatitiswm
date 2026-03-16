@@ -37,7 +37,7 @@ void ImGuiWM::process_events()
             io.KeyCtrl  = (ev.xkey.state & ControlMask) != 0;
             io.KeyShift = (ev.xkey.state & ShiftMask)   != 0;
             io.KeyAlt   = (ev.xkey.state & Mod1Mask)    != 0;
-            io.KeySuper = (ev.xkey.state & Mod4Mask)    != 0;
+            io.KeySuper = (ev.xkey.state & Mod1Mask)    != 0;
 
             char buf[8]; KeySym sym = 0;
             int len = XLookupString(&ev.xkey, buf, sizeof(buf), &sym, nullptr);
