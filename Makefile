@@ -5,9 +5,9 @@ CXXFLAGS := -std=c++17 -O2 -Wall -Wextra \
              -Ithird_party/imgui/backends \
              $(shell pkg-config --cflags x11 xcomposite xdamage xrender xfixes gl)
 
-LDFLAGS := $(shell pkg-config --libs x11 xcomposite xdamage xrender xfixes gl) \
-            -lX11 -lXext -lXcomposite -lXdamage -lXrender -lXfixes \
-            -lGL -lGLX -ldl
+LDFLAGS  := $(shell pkg-config --libs x11 xcomposite xdamage xrender xfixes gl) \
+             -lX11 -lXext -lXcomposite -lXdamage -lXrender -lXfixes \
+             -lGL -lGLX -ldl
 
 IMGUI_DIR  := third_party/imgui
 IMGUI_SRCS := $(IMGUI_DIR)/imgui.cpp \
@@ -24,7 +24,6 @@ WM_SRCS    := src/main.cpp \
 
 SRCS := $(WM_SRCS) $(IMGUI_SRCS)
 OBJS := $(SRCS:.cpp=.o)
-
 TARGET := imgui-wm
 
 all: $(TARGET)
@@ -33,16 +32,17 @@ $(TARGET): $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(OBJS) $(TARGET)
 
-# ─── Install Dear ImGui ───────────────────────────────────────
-# Clones imgui into third_party/ if not present.
+clean-all: clean
+	rm -rf third_party/imgui
+
 imgui:
 	@mkdir -p third_party
 	git clone --depth 1 --branch v1.90.4 \
 	    https://github.com/ocornut/imgui.git third_party/imgui
 
-.PHONY: all clean imgui
+.PHONY: all clean clean-all imgui
