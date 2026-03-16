@@ -21,14 +21,14 @@ OpenGL-backed composite overlay.
 
 ```
 libx11  libxcomposite  libxdamage  libxrender  libxfixes
-libgl   libglx
+libgl   libglx libxext
 ```
 
 On Debian/Ubuntu:
 ```sh
 sudo apt install \
   libx11-dev libxcomposite-dev libxdamage-dev \
-  libxrender-dev libxfixes-dev libgl-dev
+  libxrender-dev libxext-dev libxfixes-dev libgl-dev
 ```
 
 ## Build
