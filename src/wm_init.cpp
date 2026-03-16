@@ -249,7 +249,7 @@ void ImGuiWM::setup_keybinds()
         m_keybinds.push_back(std::move(kb));
     };
 
-    const unsigned M = Mod4Mask; // Super key
+    const unsigned M = Mod1Mask; // Super key
 
     // Super+Q  → kill focused
     grab(M, XK_q, [this]{ kill_focused(); });
