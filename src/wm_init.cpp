@@ -186,7 +186,7 @@ void ImGuiWM::handle_button_press(XButtonEvent& ev)
         raise(c);
 
         // Super+Button1 → move, Super+Button3 → resize
-        if (ev.state & Mod4Mask) {
+        if (ev.state & Mod1Mask) {
             bool resize = (ev.button == Button3);
             begin_drag(c, ev.x_root, ev.y_root, resize);
             XGrabPointer(m_dpy, m_root, True,
