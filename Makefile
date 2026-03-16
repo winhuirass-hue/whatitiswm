@@ -30,9 +30,7 @@ TARGET := imgui-wm
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ \
-        -Wl, --start-group $(OBJS) -Wl, --end-group \
-        $(LDFLAGS)
+	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
