@@ -5,8 +5,9 @@ CXXFLAGS := -std=c++17 -O2 -Wall -Wextra \
              -Ithird_party/imgui/backends \
              $(shell pkg-config --cflags x11 xcomposite xdamage xrender xfixes gl)
 
-LDFLAGS  := $(shell pkg-config --libs x11 xcomposite xdamage xrender xfixes gl) \
-             -lGLX -ldl
+LDFLAGS := $(shell pkg-config --libs ...) \
+            -lX11 -lXext -lXcomposite -lXdamage -lXrender -lXfixes \
+            -lGL -lGLX -ldl
 
 IMGUI_DIR  := third_party/imgui
 IMGUI_SRCS := $(IMGUI_DIR)/imgui.cpp \
