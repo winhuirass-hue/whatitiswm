@@ -199,6 +199,11 @@ void ImGuiWM::render_client_window(Client& c)
 
     // Window content
     ImVec2 content_size = {(float)c.w, (float)c.h};
+    ImGui::BeginChild("##client_area", content_size, false,
+                      ImGuiWindowFlags_NoDecoration |
+                      ImGuiWindowFlags_NoMove |
+                      ImGuiWindowFlags_NoSavedSettings);
+
     if (c.tex) {
         ImGui::Image((ImTextureID)(intptr_t)c.tex, content_size,
                      ImVec2(0, 0), ImVec2(1, 1));
@@ -211,9 +216,31 @@ void ImGuiWM::render_client_window(Client& c)
         ImGui::Dummy(content_size);
     }
 
-    // Focus / drag on click
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) {
-        if (ImGui::IsMouseClicked(0)) {
+    // Forward right-clicks to the client window
+    if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        XEvent ev{};
+        ev.type = ButtonPress;
+        ev.xbutton.button = Button3; // right-click
+        ev.xbutton.window = c.xwin;
+        ev.xbutton.root   = m_root;
+        ev.xbutton.subwindow = None;
+        ev.xbutton.time   = CurrentTime;
+        ev.xbutton.x      = (int)ImGui::GetMousePos().x - c.x;
+        ev.xbutton.y      = (int)ImGui::GetMousePos().y - c.y;
+        ev.xbutton.x_root = (int)ImGui::GetMousePos().x;
+        ev.xbutton.y_root = (int)ImGui::GetMousePos().y;
+        ev.xbutton.state  = 0;
+        ev.xbutton.same_screen = True;
+
+        XSendEvent(m_dpy, c.xwin, True, ButtonPressMask, &ev);
+        XFlush(m_dpy);
+    }
+
+    ImGui::EndChild();
+
+    // Focus / drag on left-click in title bar
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             focus(&c);
             raise(&c);
         }
@@ -225,7 +252,7 @@ void ImGuiWM::render_client_window(Client& c)
         float dx = p.x - centre.x, dy = p.y - centre.y;
         return dx*dx + dy*dy <= r*r;
     };
-    if (ImGui::IsMouseClicked(0)) {
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         if      (in_circle(mp, close_pos, 7.0f)) kill_focused();
         else if (in_circle(mp, max_pos,   7.0f)) toggle_maximize(&c);
         else if (in_circle(mp, min_pos,   7.0f)) toggle_minimize(&c);
