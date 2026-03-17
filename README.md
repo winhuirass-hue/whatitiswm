@@ -14,21 +14,21 @@ OpenGL-backed composite overlay.
 | Workspaces | 8 virtual desktops |
 | Key bindings | Super+key (see table below) |
 | Taskbar | Workspace buttons, window list, layout toggle, clock |
-| Launcher | Super*+L → mini command bar |
+| Launcher | Alt+L → mini command bar |
 | Decorations | Per-window title bar with close / max / min buttons |
-*Super by defalt is Alt key, to switch to windows key in wm_init.cpp 
+
 ## Dependencies
 
 ```
 libx11  libxcomposite  libxdamage  libxrender  libxfixes
-libgl   libglx libxext
+libgl   libglx
 ```
 
 On Debian/Ubuntu:
 ```sh
 sudo apt install \
   libx11-dev libxcomposite-dev libxdamage-dev \
-  libxrender-dev libxext-dev libxfixes-dev libgl-dev
+  libxrender-dev libxfixes-dev libxext-dev libgl-dev liblua5.4-dev
 ```
 
 ## Build
@@ -56,7 +56,7 @@ DISPLAY=:1 xterm &
 | Key | Action |
 |---|---|
 | `Super+Q` | Kill focused window |
-| `Super+L` | Toggle app launcher |
+| `Alt+L` | Toggle app launcher |
 | `Super+F` | Toggle maximise |
 | `Super+T` | Toggle tiling layout |
 | `Super+M` | Monocle layout |

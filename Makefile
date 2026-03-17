@@ -3,9 +3,9 @@ CXXFLAGS := -std=c++17 -O2 -Wall -Wextra \
              -Iinclude \
              -Ithird_party/imgui \
              -Ithird_party/imgui/backends \
-             $(shell pkg-config --cflags x11 xcomposite xdamage xrender xfixes gl)
+             $(shell pkg-config --cflags x11 xcomposite xdamage xrender xfixes gl lua5.4)
 
-LDFLAGS  := $(shell pkg-config --libs x11 xcomposite xdamage xrender xfixes gl) \
+LDFLAGS  := $(shell pkg-config --libs x11 xcomposite xdamage xrender xfixes gl lua5.4) \
              -lX11 -lXext -lXcomposite -lXdamage -lXrender -lXfixes \
              -lGL -lGLX -ldl
 
@@ -20,7 +20,8 @@ WM_SRCS    := src/main.cpp \
               src/wm_init.cpp \
               src/wm_events.cpp \
               src/wm_clients.cpp \
-              src/wm_render.cpp
+              src/wm_render.cpp \
+              src/config.cpp
 
 SRCS := $(WM_SRCS) $(IMGUI_SRCS)
 OBJS := $(SRCS:.cpp=.o)
@@ -40,6 +41,7 @@ clean:
 clean-all: clean
 	rm -rf third_party/imgui
 
+# Install Dear ImGui
 imgui:
 	@mkdir -p third_party
 	git clone --depth 1 --branch v1.90.4 \
