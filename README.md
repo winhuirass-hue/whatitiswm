@@ -1,4 +1,4 @@
-# imgui-wm — Dear ImGui X11 Window Manager
+# Whatitiswm — Dear ImGui X11 Window Manager
 
 A compositing window manager for X11 written in C++17 that uses
 **Dear ImGui** as its entire UI toolkit: window decorations, taskbar,
