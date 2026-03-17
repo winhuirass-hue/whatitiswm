@@ -55,14 +55,14 @@ keys = {
     { mod = "alt",         key = "l",      action = "launcher"          },
 
     -- Workspaces  1-8
-    { mod = "super",       key = "1",      action = "workspace 1"       },
-    { mod = "super",       key = "2",      action = "workspace 2"       },
-    { mod = "super",       key = "3",      action = "workspace 3"       },
-    { mod = "super",       key = "4",      action = "workspace 4"       },
-    { mod = "super",       key = "5",      action = "workspace 5"       },
-    { mod = "super",       key = "6",      action = "workspace 6"       },
-    { mod = "super",       key = "7",      action = "workspace 7"       },
-    { mod = "super",       key = "8",      action = "workspace 8"       },
+    { mod = "alt",       key = "1",      action = "workspace 1"       },
+    { mod = "alt",       key = "2",      action = "workspace 2"       },
+    { mod = "alt",       key = "3",      action = "workspace 3"       },
+    { mod = "alt",       key = "4",      action = "workspace 4"       },
+    { mod = "alt",       key = "5",      action = "workspace 5"       },
+    { mod = "alt",       key = "6",      action = "workspace 6"       },
+    { mod = "alt",       key = "7",      action = "workspace 7"       },
+    { mod = "alt",       key = "8",      action = "workspace 8"       },
 
     -- Move window to workspace
     { mod = "super+shift", key = "1",      action = "move_to 1"         },
@@ -87,8 +87,8 @@ keys = {
 -- ── Mouse bindings ───────────────────────────────────────────
 -- button: "left"(1), "middle"(2), "right"(3)
 mouse = {
-    { mod = "super", button = "left",  action = "move"   },
-    { mod = "super", button = "right", action = "resize" },
+    { mod = "alt", button = "left",  action = "move"   },
+    { mod = "alt", button = "right", action = "resize" },
 }
 
 -- ── Autostart ────────────────────────────────────────────────
