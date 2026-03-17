@@ -12,7 +12,7 @@ wm = {
     font_size      = 13.0,       -- ImGui font size (pts)
     master_ratio   = 0.55,       -- fraction of screen for tiling master
     workspaces     = 8,          -- number of virtual desktops
-    focus_follows_mouse = false,
+    focus_follows_mouse = true,
 }
 
 -- ── Theme / colours (RGBA 0-255) ─────────────────────────────
