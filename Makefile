@@ -25,7 +25,7 @@ WM_SRCS    := src/main.cpp \
 
 SRCS := $(WM_SRCS) $(IMGUI_SRCS)
 OBJS := $(SRCS:.cpp=.o)
-TARGET := imgui-wm
+TARGET := what
 
 all: $(TARGET)
 
