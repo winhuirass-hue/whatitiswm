@@ -94,7 +94,6 @@ mouse = {
 -- ── Autostart ────────────────────────────────────────────────
 -- Commands run once after the WM is ready.
 autostart = {
-    "picom --backend glx &",
     "dunst &",
     "nm-applet &",
     -- "feh --bg-scale ~/wallpaper.jpg &",
