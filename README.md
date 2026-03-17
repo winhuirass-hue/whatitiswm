@@ -21,7 +21,7 @@ OpenGL-backed composite overlay.
 
 ```
 libx11  libxcomposite  libxdamage  libxrender  libxfixes
-libgl   libglx
+libgl   libglx  liblua5.4
 ```
 
 On Debian/Ubuntu:
@@ -29,6 +29,9 @@ On Debian/Ubuntu:
 sudo apt install \
   libx11-dev libxcomposite-dev libxdamage-dev \
   libxrender-dev libxfixes-dev libxext-dev libgl-dev liblua5.4-dev
+```
+```bash
+sudo apt install xserver-xephyr
 ```
 
 ## Build
