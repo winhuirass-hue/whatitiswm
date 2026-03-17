@@ -44,13 +44,13 @@ make imgui
 make -j$(nproc)
 
 # 3. Run (in a nested Xephyr or as your real WM)
-DISPLAY=:1 ./imgui-wm
+DISPLAY=:1 ./what
 ```
 
 To test inside **Xephyr**:
 ```sh
 Xephyr :1 -screen 1280x800 &
-DISPLAY=:1 ./imgui-wm &
+DISPLAY=:1 ./what &
 DISPLAY=:1 xterm &
 ```
 
