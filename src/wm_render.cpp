@@ -143,17 +143,21 @@ void ImGuiWM::render_desktop()
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_clients()
 {
-    for (auto& c : m_clients) {
-        if (c.minimized) continue;
+    // Iterate only over clients in the current workspace
+    for (auto* c : current_ws().clients) {
+        if (c->minimized) continue;
 
-        bool on_ws = false;
-        for (auto* wc : current_ws().clients)
-            if (wc == &c) { on_ws = true; break; }
-        if (!on_ws) continue;
+        // Update texture if needed
+        if (c->dirty) {
+            composite_update_texture(*c);
+            c->dirty = false;
+        }
 
-        render_client_window(c);
+        // Render the client window
+        render_client_window(*c);
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_client_window(Client& c)
