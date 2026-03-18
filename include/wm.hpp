@@ -33,6 +33,7 @@ struct Client {
     int     prev_x = 0, prev_y = 0, prev_w = 0, prev_h = 0; // restore from max
     bool    floating    = true;
     bool    maximized   = false;
+    bool    has_csd     = false;
     bool    minimized   = false;
     bool    focused     = false;
     bool    dirty       = true;    // composite texture needs refresh
