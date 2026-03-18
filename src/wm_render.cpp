@@ -393,6 +393,7 @@ void ImGuiWM::render_launcher()
         m_show_launcher = false;
     }
 
+    // Escape closes launcher (adjust depending on ImGui version)
     if (ImGui::IsKeyPressed(ImGuiKey_Escape))
         m_show_launcher = false;
 
