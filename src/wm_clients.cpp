@@ -244,14 +244,15 @@ void ImGuiWM::switch_workspace(int id)
 // ─────────────────────────────────────────────────────────────
 // Layout
 // ─────────────────────────────────────────────────────────────
-void ImGuiWM::apply_layout(Workspace& ws)
-{
+void ImGuiWM::apply_layout(Workspace& ws) {
     switch (ws.layout) {
-    case Layout::Tiling:   tile_workspace(ws);    break;
+    case Layout::Tiling:   tile_workspace(ws); break;
     case Layout::Monocle:  monocle_workspace(ws); break;
-    default: break;
+    case Layout::Floating: /* floating handled individually */ break;
+    case Layout::Ribbon:   ribbon_workspace(ws); break;
     }
 }
+
 
 void ImGuiWM::tile_workspace(Workspace& ws)
 {
