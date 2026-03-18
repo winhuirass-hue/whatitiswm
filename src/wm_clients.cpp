@@ -53,6 +53,38 @@ Client* ImGuiWM::manage(Window w)
     return &c;
 }
 
+bool ImGuiWM::read_motif_hints(Window w, bool& no_decors) {
+    Atom A = XInternAtom(m_dpy, "_MOTIF_WM_HINTS", False);
+    Atom actual;
+    int format;
+    unsigned long n, after;
+    unsigned char* data = nullptr;
+
+    if (Success != XGetWindowProperty(
+            m_dpy, w, A, 0, 5, False, A,
+            &actual, &format, &n, &after, &data) || !data)
+    {
+        return false;
+    }
+
+    if (n >= 5) {
+        struct MotifHints {
+            uint32_t flags;
+            uint32_t functions;
+            uint32_t decorations;
+            int32_t  input_mode;
+            uint32_t status;
+        };
+        auto* h = reinterpret_cast<MotifHints*>(data);
+
+        if ((h->flags & (1 << 1)) && h->decorations == 0)
+            no_decors = true;
+    }
+
+    XFree(data);
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::unmanage(Window w)
 {
@@ -97,6 +129,37 @@ Client* ImGuiWM::find_client(Window w)
     auto it = m_win_index.find(w);
     if (it == m_win_index.end()) return nullptr;
     return &m_clients[it->second];
+}
+bool ImGuiWM::read_motif_hints(Window w, bool& no_decors) {
+    Atom A = XInternAtom(m_dpy, "_MOTIF_WM_HINTS", False);
+    Atom actual;
+    int format;
+    unsigned long n, after;
+    unsigned char* data = nullptr;
+
+    if (Success != XGetWindowProperty(
+            m_dpy, w, A, 0, 5, False, A,
+            &actual, &format, &n, &after, &data) || !data)
+    {
+        return false;
+    }
+
+    if (n >= 5) {
+        struct MotifHints {
+            uint32_t flags;
+            uint32_t functions;
+            uint32_t decorations;
+            int32_t  input_mode;
+            uint32_t status;
+        };
+        auto* h = reinterpret_cast<MotifHints*>(data);
+
+        if ((h->flags & (1 << 1)) && h->decorations == 0)
+            no_decors = true;
+    }
+
+    XFree(data);
+    return true;
 }
 
 // ─────────────────────────────────────────────────────────────
