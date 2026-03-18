@@ -48,7 +48,7 @@ struct Client {
 // ─────────────────────────────────────────────────────────────
 //  Layout modes
 // ─────────────────────────────────────────────────────────────
-enum class Layout { Floating, Tiling, Monocle };
+enum class Layout { Floating, Tiling, Monocle, Ribbon };
 
 // ─────────────────────────────────────────────────────────────
 //  Workspace / virtual desktop
