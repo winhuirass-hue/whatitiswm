@@ -175,12 +175,17 @@ private:
     GLuint       m_fbo         = 0;
     GLuint       m_fbo_tex     = 0;
 
+    Window m_ewmh_window = 0;
+
     // Atoms
     Atom m_WM_PROTOCOLS, m_WM_DELETE_WINDOW, m_WM_STATE;
     Atom m_NET_WM_NAME, m_NET_WM_STATE, m_NET_WM_STATE_FULLSCREEN;
     Atom m_NET_ACTIVE_WINDOW, m_NET_CLIENT_LIST;
     Atom m_NET_CURRENT_DESKTOP, m_NET_NUMBER_OF_DESKTOPS;
     Atom m_NET_WM_DESKTOP;
+    Atom m_NET_SUPPORTED = 0;
+    Atom m_NET_SUPPORTING_WM_CHECK = 0;
+    Atom m_UTF8_STRING = 0;
 
     // State
     bool         m_running     = false;
