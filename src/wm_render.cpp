@@ -331,9 +331,12 @@ void ImGuiWM::render_taskbar()
     }
 
     // Right side
-    const char* layout_icon =
-        (current_ws().layout == Layout::Tiling)  ? "|=" :
-        (current_ws().layout == Layout::Monocle) ? "[]" : "F";
+   const char* layout_icon =
+    (current_ws().layout == Layout::Tiling)  ? "|=" :
+    (current_ws().layout == Layout::Monocle) ? "[]" :
+    (current_ws().layout == Layout::Ribbon)  ? "≡"  :
+    (current_ws().layout == Layout::Split)   ? "||"  :
+                                               "F";
 
     ImGui::SameLine((float)m_sw - 150.0f);
 
