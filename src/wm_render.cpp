@@ -263,6 +263,14 @@ void ImGuiWM::render_client_window(Client& c)
     ImGui::PopStyleColor();
 }
 
+void ImGuiWM::render_client_shadow(const Client& c) {
+    ImDrawList* dl = ImGui::GetBackgroundDrawList();
+    ImVec2 pos(c.x + 6, c.y + 6);
+    ImVec2 size(c.x + c.w + 12, c.y + c.h + 12);
+
+    dl->AddRectFilled(pos, size, IM_COL32(0,0,0,80), 12.0f); // soft rounded shadow
+}
+
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_taskbar()
 {
