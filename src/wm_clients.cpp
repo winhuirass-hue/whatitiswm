@@ -250,6 +250,7 @@ void ImGuiWM::apply_layout(Workspace& ws) {
     case Layout::Monocle:  monocle_workspace(ws); break;
     case Layout::Floating: /* floating handled individually */ break;
     case Layout::Ribbon:   ribbon_workspace(ws); break;
+    case Layout::Split:    split_workspace(ws); break;
     }
 }
 
