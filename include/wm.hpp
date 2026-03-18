@@ -113,6 +113,7 @@ private:
     void render_desktop();
     void render_clients();
     void render_client_window(Client& c);
+    void render_client_shadow(const Client& c);
     void render_taskbar();
     void render_launcher();
     void render_workspace_switcher();
