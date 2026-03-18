@@ -274,28 +274,6 @@ void ImGuiWM::tile_workspace(Workspace& ws)
         return;
     }
 
-    // Example: master+stack tiling
-    int master_w = m_sw / 2;
-    int stack_n  = n - 1;
-    int stack_h  = (m_sh - bar - gap * (stack_n - 1)) / stack_n;
-
-    Client* master = tv[0];
-    master->x = 0; master->y = bar;
-    master->w = master_w - gap; master->h = m_sh - bar;
-    XMoveResizeWindow(m_dpy, master->xwin,
-                      master->x, master->y, master->w, master->h);
-    master->dirty = true;
-
-    for (int i = 1; i < n; ++i) {
-        Client* c = tv[i];
-        c->x = master_w;
-        c->y = bar + (i - 1) * (stack_h + gap);
-        c->w = m_sw - master_w;
-        c->h = stack_h;
-        XMoveResizeWindow(m_dpy, c->xwin, c->x, c->y, c->w, c->h);
-        c->dirty = true;
-    }
-
     // Master (left half) + stack (right half)
     int master_w = m_sw / 2;
     int stack_n  = n - 1;
@@ -316,6 +294,34 @@ void ImGuiWM::tile_workspace(Workspace& ws)
         c->h = stack_h;
         XMoveResizeWindow(m_dpy, c->xwin, c->x, c->y, c->w, c->h);
         c->dirty = true;
+    }
+}
+
+void ImGuiWM::split_workspace(Workspace& ws)
+{
+    const int bar = 30;
+    const int gap = 4;
+    std::vector<Client*> tv;
+    for (auto* c : ws.clients)
+        if (!c->minimized) tv.push_back(c);
+
+    int n = (int)tv.size();
+    if (n == 0) return;
+
+    // Each client gets equal vertical slice
+    int h = (m_sh - bar - gap * (n - 1)) / n;
+    int y = bar;
+
+    for (auto* c : tv) {
+        c->x = gap;
+        c->y = y;
+        c->w = m_sw - 2 * gap;
+        c->h = h;
+
+        XMoveResizeWindow(m_dpy, c->xwin, c->x, c->y, c->w, c->h);
+        c->dirty = true;
+
+        y += h + gap;
     }
 }
 
