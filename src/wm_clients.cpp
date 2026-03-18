@@ -274,22 +274,27 @@ void ImGuiWM::tile_workspace(Workspace& ws)
         return;
     }
 
-    // Horizontal ribbon layout
-    int w = (m_sw - (n + 1) * gap) / n;   // width per client
-    int h = m_sh - bar - gap;             // full height minus bar/gap
-    int x = gap;
+    // Example: master+stack tiling
+    int master_w = m_sw / 2;
+    int stack_n  = n - 1;
+    int stack_h  = (m_sh - bar - gap * (stack_n - 1)) / stack_n;
 
-    for (auto* c : tv) {
-        c->x = x;
-        c->y = bar + gap;
-        c->w = w;
-        c->h = h;
+    Client* master = tv[0];
+    master->x = 0; master->y = bar;
+    master->w = master_w - gap; master->h = m_sh - bar;
+    XMoveResizeWindow(m_dpy, master->xwin,
+                      master->x, master->y, master->w, master->h);
+    master->dirty = true;
+
+    for (int i = 1; i < n; ++i) {
+        Client* c = tv[i];
+        c->x = master_w;
+        c->y = bar + (i - 1) * (stack_h + gap);
+        c->w = m_sw - master_w;
+        c->h = stack_h;
         XMoveResizeWindow(m_dpy, c->xwin, c->x, c->y, c->w, c->h);
         c->dirty = true;
-        x += w + gap;
     }
-}
-
 
     // Master (left half) + stack (right half)
     int master_w = m_sw / 2;
