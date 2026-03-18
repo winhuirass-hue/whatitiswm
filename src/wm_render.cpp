@@ -12,6 +12,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <unistd.h>
+#include <sys/types.h>
 #include <algorithm>
 
 // ─────────────────────────────────────────────────────────────
@@ -323,8 +324,8 @@ void ImGuiWM::render_taskbar()
 
     // Right side
     const char* layout_icon =
-        (current_ws().layout == Layout::Tiling)  ? "[T]" :
-        (current_ws().layout == Layout::Monocle) ? "[M]" : "[F]";
+        (current_ws().layout == Layout::Tiling)  ? "|=" :
+        (current_ws().layout == Layout::Monocle) ? "[]" : "F";
 
     ImGui::SameLine((float)m_sw - 150.0f);
 
@@ -344,7 +345,7 @@ void ImGuiWM::render_taskbar()
     time_t t = time(nullptr);
     struct tm* tm_info = localtime(&t);
     char tbuf[16];
-    strftime(tbuf, sizeof(tbuf), "%H:%M:%S", tm_info);
+    strftime(tbuf, sizeof(tbuf), "%H:%M", tm_info);
     ImGui::TextUnformatted(tbuf);
 
     ImGui::End();
