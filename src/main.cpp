@@ -30,7 +30,7 @@ int main(int /*argc*/, char** /*argv*/) {
     g_wm = &wm;
 
     if (!wm.init()) {
-        fprintf(stderr, "[imgui-wm] Failed to initialize\n");
+        fprintf(stderr, "[init] Failed to start init\n");
         return 1;
     }
 
