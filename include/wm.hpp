@@ -84,7 +84,6 @@ public:
 
     bool init();
     void run();
-    bool read_motif_hints(Window w, bool& no_decors);
     void shutdown();
     void request_quit() { m_running = false; }
 
