@@ -137,6 +137,7 @@ private:
     void tile_workspace(Workspace& ws);
     void monocle_workspace(Workspace& ws);
     void ribbon_workspace(Workspace& ws);
+    void split_workspace(Workspace& ws);
 
     // ── Workspaces ───────────────────────────────────────────
     void switch_workspace(int id);
