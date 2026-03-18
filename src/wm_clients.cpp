@@ -326,6 +326,31 @@ void ImGuiWM::monocle_workspace(Workspace& ws)
     }
 }
 
+void ImGuiWM::ribbon_workspace(Workspace& ws) {
+    const int bar = 30;
+    const int gap = 4;
+    std::vector<Client*> tv;
+    for (auto* c : ws.clients)
+        if (!c->minimized) tv.push_back(c);
+
+    int n = (int)tv.size();
+    if (n == 0) return;
+
+    int w = (m_sw - (n + 1) * gap) / n;
+    int h = m_sh - bar - gap;
+    int x = gap;
+
+    for (auto* c : tv) {
+        c->x = x;
+        c->y = bar + gap;
+        c->w = w;
+        c->h = h;
+        XMoveResizeWindow(m_dpy, c->xwin, c->x, c->y, c->w, c->h);
+        c->dirty = true;
+        x += w + gap;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::update_ewmh_client_list()
 {
