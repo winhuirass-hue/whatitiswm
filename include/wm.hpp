@@ -207,6 +207,8 @@ private:
     struct Notification { std::string text; float ttl; };
     std::vector<Notification> m_notifications;
 
+    std::vector<std::string> m_launcher_history;
+
     // Frame timing
     using Clock = std::chrono::steady_clock;
     Clock::time_point m_last_frame;
