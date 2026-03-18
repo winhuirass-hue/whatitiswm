@@ -27,7 +27,13 @@ Client* ImGuiWM::manage(Window w)
 
     m_win_index[w] = m_clients.size() - 1;
 
-    // Listen to window events
+    {
+        bol no_decors = false
+        if (read_motif_hints(w, no_decors))
+            c.has_csd = no_decors;
+        else
+            c.has_csd = false;
+
     XSelectInput(m_dpy, w,
         PropertyChangeMask |
         StructureNotifyMask |
