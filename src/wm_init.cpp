@@ -251,26 +251,43 @@ void ImGuiWM::setup_keybinds()
 
     const unsigned M = Mod4Mask; // Super key
 
-    // Super+Q  → kill focused
+    // Super+Q → kill focused
     grab(M, XK_q, [this]{ kill_focused(); });
 
-    // Alt+L  → launch (show launcher)
+    // Alt+L → toggle launcher
     grab(Mod1Mask, XK_l, [this]{ m_show_launcher = !m_show_launcher; });
 
-    // Super+T  → tile layout toggle
+    // Layout switching with Alt
+    grab(Mod1Mask, XK_m, [this]{
+        auto& ws = current_ws();
+        ws.layout = Layout::Monocle;
+        apply_layout(ws);
+    });
+    grab(Mod1Mask, XK_t, [this]{
+        auto& ws = current_ws();
+        ws.layout = Layout::Tiling;
+        apply_layout(ws);
+    });
+    grab(Mod1Mask, XK_r, [this]{
+        auto& ws = current_ws();
+        ws.layout = Layout::Ribbon;
+        apply_layout(ws);
+    });
+
+    // Super+T → toggle tiling/floating
     grab(M, XK_t, [this]{
         auto& ws = current_ws();
         ws.layout = (ws.layout == Layout::Tiling) ? Layout::Floating : Layout::Tiling;
         apply_layout(ws);
     });
 
-    // Super+M  → monocle
+    // Super+M → monocle
     grab(M, XK_m, [this]{
         current_ws().layout = Layout::Monocle;
         apply_layout(current_ws());
     });
 
-    // Super+F  → maximize focused
+    // Super+F → maximize focused
     grab(M, XK_f, [this]{ if (m_focused) toggle_maximize(m_focused); });
 
     // Super+1..8 → switch workspace
@@ -287,7 +304,7 @@ void ImGuiWM::setup_keybinds()
         });
     }
 
-    // Alt+Tab → cycle focus (simplified)
+    // Alt+Tab → cycle focus
     grab(Mod1Mask, XK_Tab, [this]{
         auto& ws = current_ws();
         if (ws.clients.size() < 2) return;
