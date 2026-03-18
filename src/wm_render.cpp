@@ -356,7 +356,7 @@ void ImGuiWM::render_launcher()
 {
     ImVec2 center = {(float)m_sw * 0.5f, (float)m_sh * 0.4f};
     ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5f, 0.5f});
-    ImGui::SetNextWindowSize({400, 60}, ImGuiCond_Always);
+    ImGui::SetNextWindowSize({400, 100}, ImGuiCond_Always);
 
     ImGuiWindowFlags flags =
         ImGuiWindowFlags_NoDecoration  |
@@ -370,6 +370,15 @@ void ImGuiWM::render_launcher()
     bool enter = ImGui::InputText("##cmd", m_launcher_buf, sizeof(m_launcher_buf),
                                   ImGuiInputTextFlags_EnterReturnsTrue);
 
+    // Show simple suggestions (history)
+    for (const auto& cmd : m_launcher_history) {
+        if (cmd.find(m_launcher_buf) != std::string::npos) {
+            if (ImGui::Selectable(cmd.c_str())) {
+                strncpy(m_launcher_buf, cmd.c_str(), sizeof(m_launcher_buf));
+            }
+        }
+    }
+
     if (enter && m_launcher_buf[0] != '\0') {
         pid_t pid = fork();
         if (pid == 0) {
@@ -377,6 +386,8 @@ void ImGuiWM::render_launcher()
             execlp("sh", "sh", "-c", m_launcher_buf, (char*)nullptr);
             _exit(1);
         }
+        // Save to history
+        m_launcher_history.push_back(m_launcher_buf);
         memset(m_launcher_buf, 0, sizeof(m_launcher_buf));
         m_show_launcher = false;
     }
@@ -387,7 +398,6 @@ void ImGuiWM::render_launcher()
     ImGui::End();
     ImGui::PopStyleVar();
 }
-
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_notifications()
 {
