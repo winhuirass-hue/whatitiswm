@@ -45,6 +45,8 @@ struct Client {
     Pixmap      pixmap  = 0;
     GLXPixmap   glx_pix = 0;
     GLuint      tex     = 0;
+    int         tex_w   = 0;   // dimensions of current GPU texture allocation
+    int         tex_h   = 0;   // used to detect resize and avoid full realloc
 
     // Damage handle
     Damage      damage  = 0;
