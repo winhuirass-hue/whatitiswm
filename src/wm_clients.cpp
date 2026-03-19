@@ -29,7 +29,7 @@ Client* ImGuiWM::manage(Window w)
     m_win_index[w] = m_clients.size() - 1;
 
     {
-        bol no_decors = false
+        bool no_decors = false
         if (read_motif_hints(w, no_decors))
             c.has_csd = no_decors;
         else
@@ -60,11 +60,14 @@ Client* ImGuiWM::manage(Window w)
     return &c;
 }
 
-bool ImGuiWM::read_motif_hints(Window w, bool& no_decors) {
+bool ImGuiWM::read_motif_hints(Window w, bool& no_decors)
+{
+    no_decors = false;
+
     Atom A = XInternAtom(m_dpy, "_MOTIF_WM_HINTS", False);
     Atom actual;
     int format;
-    unsigned long n, after;
+    unsigned long n = 0, after = 0;
     unsigned char* data = nullptr;
 
     if (Success != XGetWindowProperty(
@@ -84,8 +87,9 @@ bool ImGuiWM::read_motif_hints(Window w, bool& no_decors) {
         };
         auto* h = reinterpret_cast<MotifHints*>(data);
 
-        if ((h->flags & (1 << 1)) && h->decorations == 0)
-            no_decors = true;
+        // біт 1 у flags означає, що поле decorations дійсне
+        if ((h->flags & (1u << 1)) && h->decorations == 0u)
+            no_decors = true; // клієнт просить без серверних декорацій (CSD)
     }
 
     XFree(data);
