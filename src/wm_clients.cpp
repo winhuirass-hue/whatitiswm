@@ -60,41 +60,41 @@ Client* ImGuiWM::manage(Window w)
     return &c;
 }
 
-bool ImGuiWM::read_motif_hints(Window w, bool& no_decors)
-{
-    no_decors = false;
+//bool ImGuiWM::read_motif_hints(Window w, bool& no_decors)
+//{
+//    no_decors = false;
 
-    Atom A = XInternAtom(m_dpy, "_MOTIF_WM_HINTS", False);
-    Atom actual;
-    int format;
-    unsigned long n = 0, after = 0;
-    unsigned char* data = nullptr;
+//    Atom A = XInternAtom(m_dpy, "_MOTIF_WM_HINTS", False);
+//    Atom actual;
+//    int format;
+//    unsigned long n = 0, after = 0;
+//    unsigned char* data = nullptr;
 
-    if (Success != XGetWindowProperty(
-            m_dpy, w, A, 0, 5, False, A,
-            &actual, &format, &n, &after, &data) || !data)
-    {
-        return false;
-    }
+ //   if (Success != XGetWindowProperty(
+ //           m_dpy, w, A, 0, 5, False, A,
+ //           &actual, &format, &n, &after, &data) || !data)
+ //   {
+ //       return false;
+ //   }
 
-    if (n >= 5) {
-        struct MotifHints {
-            uint32_t flags;
-            uint32_t functions;
-            uint32_t decorations;
-            int32_t  input_mode;
-            uint32_t status;
-        };
-        auto* h = reinterpret_cast<MotifHints*>(data);
+ //   if (n >= 5) {
+//        struct MotifHints {
+//            uint32_t flags;
+//            uint32_t functions;
+//            uint32_t decorations;
+//            int32_t  input_mode;
+//            uint32_t status;
+//        };
+//        auto* h = reinterpret_cast<MotifHints*>(data);
 
         // біт 1 у flags означає, що поле decorations дійсне
-        if ((h->flags & (1u << 1)) && h->decorations == 0u)
-            no_decors = true; // клієнт просить без серверних декорацій (CSD)
-    }
+//        if ((h->flags & (1u << 1)) && h->decorations == 0u)
+//            no_decors = true; // клієнт просить без серверних декорацій (CSD)
+ //   }
 
-    XFree(data);
-    return true;
-}
+    //XFree(data);
+    //return true;
+//}
 
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::unmanage(Window w)
