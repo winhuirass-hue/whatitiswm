@@ -265,7 +265,7 @@ void ImGuiWM::setup_keybinds()
     });
     grab(Mod1Mask, XK_t, [this]{
         auto& ws = current_ws();
-        ws.layout =  (ws.layout == Layout::Tiling) ? Layout::Floating : Layout::Tiling;
+        ws.layout = (ws.layout == Layout::Tiling) ? Layout::Floating : Layout::Tiling;
         apply_layout(ws);
     });
     grab(Mod1Mask, XK_r, [this]{
@@ -304,15 +304,26 @@ void ImGuiWM::setup_keybinds()
         });
     }
 
-    // Alt+Tab → cycle focus
+    // Alt+Tab → cycle focus forward through visible clients
     grab(Mod1Mask, XK_Tab, [this]{
         auto& ws = current_ws();
         if (ws.clients.size() < 2) return;
+
+        // Find the current position by comparing Window IDs
+        // (ws.clients holds Window, not Client*, so no pointer comparison)
+        Window focused_win = m_focused ? m_focused->xwin : 0;
         size_t pos = 0;
-        for (size_t i = 0; i < ws.clients.size(); ++i)
-            if (ws.clients[i] == m_focused) { pos = i; break; }
-        pos = (pos + 1) % ws.clients.size();
-        focus(ws.clients[pos]);
+        for (size_t i = 0; i < ws.clients.size(); ++i) {
+            if (ws.clients[i] == focused_win) { pos = i; break; }
+        }
+
+        // Advance to the next non-minimized client, wrapping around
+        size_t n = ws.clients.size();
+        for (size_t attempt = 1; attempt < n; ++attempt) {
+            size_t next = (pos + attempt) % n;
+            Client* c = find_client(ws.clients[next]);
+            if (c && !c->minimized) { focus(c); return; }
+        }
     });
 }
 
