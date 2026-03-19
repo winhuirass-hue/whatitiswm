@@ -275,18 +275,15 @@ void ImGuiWM::render_client_shadow(const Client& c) {
 void ImGuiWM::render_taskbar()
 {
     const float BAR_H = 28.0f;
-
     ImGui::SetNextWindowPos({0, 0});
     ImGui::SetNextWindowSize({(float)m_sw, BAR_H});
     ImGui::SetNextWindowBgAlpha(0.88f);
-
     ImGuiWindowFlags flags =
-        ImGuiWindowFlags_NoDecoration         |
-        ImGuiWindowFlags_NoMove               |
-        ImGuiWindowFlags_NoScrollWithMouse    |
+        ImGuiWindowFlags_NoDecoration          |
+        ImGuiWindowFlags_NoMove                |
+        ImGuiWindowFlags_NoScrollWithMouse     |
         ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoSavedSettings;
-
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(6, 4));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   ImVec2(4, 2));
     ImGui::Begin("##taskbar", nullptr, flags);
@@ -297,13 +294,10 @@ void ImGuiWM::render_taskbar()
         ImGui::PushStyleColor(ImGuiCol_Button,
             active ? ImVec4(0.25f, 0.50f, 0.80f, 1.0f)
                    : ImVec4(0.15f, 0.15f, 0.22f, 1.0f));
-
         std::string label = m_workspaces[i].name;
         if (!m_workspaces[i].clients.empty() && !active) label += " \xE2\x80\xA2";
-
         if (ImGui::Button(label.c_str(), {28, 20}))
             switch_workspace(i);
-
         ImGui::PopStyleColor();
         ImGui::SameLine();
     }
@@ -312,16 +306,17 @@ void ImGuiWM::render_taskbar()
     ImGui::Separator();
     ImGui::SameLine(0, 10);
 
-    // Window list
-    for (auto* c : current_ws().clients) {
-        ImVec4 col = c->minimized     ? ImVec4(0.10f, 0.10f, 0.15f, 0.8f)
-                   : c == m_focused   ? ImVec4(0.20f, 0.40f, 0.65f, 1.0f)
-                                      : ImVec4(0.18f, 0.18f, 0.26f, 1.0f);
-        ImGui::PushStyleColor(ImGuiCol_Button, col);
+    // Window list — ws.clients holds Window IDs; look up Client* via find_client
+    for (Window cw : current_ws().clients) {
+        Client* c = find_client(cw);
+        if (!c) continue;
 
+        ImVec4 col = c->minimized   ? ImVec4(0.10f, 0.10f, 0.15f, 0.8f)
+                   : c == m_focused ? ImVec4(0.20f, 0.40f, 0.65f, 1.0f)
+                                    : ImVec4(0.18f, 0.18f, 0.26f, 1.0f);
+        ImGui::PushStyleColor(ImGuiCol_Button, col);
         std::string label = c->title.substr(0, 20);
         if (c->minimized) label = "[" + label + "]";
-
         if (ImGui::Button(label.c_str(), {120, 20})) {
             if (c->minimized) toggle_minimize(c);
             else { focus(c); raise(c); }
@@ -330,16 +325,14 @@ void ImGuiWM::render_taskbar()
         ImGui::SameLine();
     }
 
-    // Right side
-   const char* layout_icon =
-    (current_ws().layout == Layout::Tiling)  ? "|=" :
-    (current_ws().layout == Layout::Monocle) ? "[]" :
-    (current_ws().layout == Layout::Ribbon)  ? "≡"  :
-    (current_ws().layout == Layout::Split)   ? "||"  :
-                                               "F";
-
+    // Right side — layout icon + cycle button
+    const char* layout_icon =
+        (current_ws().layout == Layout::Tiling)  ? "|=" :
+        (current_ws().layout == Layout::Monocle) ? "[]" :
+        (current_ws().layout == Layout::Ribbon)  ? "="  :
+        (current_ws().layout == Layout::Split)   ? "||" :
+                                                   "F";
     ImGui::SameLine((float)m_sw - 150.0f);
-
     if (ImGui::Button(layout_icon, {30, 20})) {
         auto& lay = current_ws().layout;
         if      (lay == Layout::Floating) lay = Layout::Tiling;
@@ -359,6 +352,9 @@ void ImGuiWM::render_taskbar()
     strftime(tbuf, sizeof(tbuf), "%H:%M", tm_info);
     ImGui::TextUnformatted(tbuf);
 
+    // FIX: PopStyleVar must come AFTER End() — style vars are per-window
+    // and must outlive the window they were pushed before.
+    // Correct order: Begin → ... → End → PopStyleVar.
     ImGui::End();
     ImGui::PopStyleVar(2);
 }
@@ -366,50 +362,151 @@ void ImGuiWM::render_taskbar()
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_launcher()
 {
+    // ── Reap any finished child processes to avoid zombies ────
+    // WNOHANG means this is non-blocking — returns immediately if no child exited.
+    while (waitpid(-1, nullptr, WNOHANG) > 0) {}
+
     ImVec2 center = {(float)m_sw * 0.5f, (float)m_sh * 0.4f};
     ImGui::SetNextWindowPos(center, ImGuiCond_Always, {0.5f, 0.5f});
-    ImGui::SetNextWindowSize({400, 100}, ImGuiCond_Always);
-
+    ImGui::SetNextWindowSize({440, 0}, ImGuiCond_Always); // height: auto-fit
     ImGuiWindowFlags flags =
-        ImGuiWindowFlags_NoDecoration  |
-        ImGuiWindowFlags_NoMove        |
-        ImGuiWindowFlags_NoSavedSettings;
+        ImGuiWindowFlags_NoDecoration   |
+        ImGuiWindowFlags_NoMove         |
+        ImGuiWindowFlags_NoSavedSettings|
+        ImGuiWindowFlags_AlwaysAutoResize;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10, 10));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,   ImVec2(6, 4));
     ImGui::Begin("##launcher", nullptr, flags);
 
-    ImGui::SetKeyboardFocusHere();
+    // ── Build filtered suggestion list from history ───────────
+    std::vector<const std::string*> suggestions;
+    std::string query(m_launcher_buf);
+    for (const auto& cmd : m_launcher_history) {
+        if (query.empty() || cmd.find(query) != std::string::npos)
+            suggestions.push_back(&cmd);
+    }
+    // Most-recent first
+    std::reverse(suggestions.begin(), suggestions.end());
+
+    // ── Keyboard navigation state (static, lives across frames) ─
+    static int  s_selected = -1;   // index into suggestions, -1 = input row
+    static bool s_focus_input = true;
+
+    // Reset selection when query changes
+    static std::string s_last_query;
+    if (query != s_last_query) {
+        s_selected   = -1;
+        s_last_query = query;
+    }
+
+    // Arrow-key navigation — handle before InputText consumes them
+    if (!suggestions.empty()) {
+        if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) {
+            s_selected = std::min(s_selected + 1, (int)suggestions.size() - 1);
+            s_focus_input = false;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) {
+            s_selected--;
+            if (s_selected < 0) { s_selected = -1; s_focus_input = true; }
+        }
+        // Fill input from selection so the user can edit before launching
+        if (s_selected >= 0 && s_selected < (int)suggestions.size()) {
+            strncpy(m_launcher_buf, suggestions[s_selected]->c_str(),
+                    sizeof(m_launcher_buf) - 1);
+            m_launcher_buf[sizeof(m_launcher_buf) - 1] = '\0';
+        }
+    }
+
+    // ── Input field ───────────────────────────────────────────
+    if (s_focus_input) {
+        ImGui::SetKeyboardFocusHere();
+        s_focus_input = false;
+    }
+
+    ImGui::SetNextItemWidth(-1.0f); // full width
     bool enter = ImGui::InputText("##cmd", m_launcher_buf, sizeof(m_launcher_buf),
                                   ImGuiInputTextFlags_EnterReturnsTrue);
 
-    // Show simple suggestions (history)
-    for (const auto& cmd : m_launcher_history) {
-        if (cmd.find(m_launcher_buf) != std::string::npos) {
-            if (ImGui::Selectable(cmd.c_str())) {
-                strncpy(m_launcher_buf, cmd.c_str(), sizeof(m_launcher_buf));
+    // ── Suggestion list ───────────────────────────────────────
+    if (!suggestions.empty()) {
+        ImGui::Separator();
+        // Cap visible rows to avoid an enormous popup
+        const int MAX_VISIBLE = 8;
+        int show_n = std::min((int)suggestions.size(), MAX_VISIBLE);
+
+        for (int i = 0; i < show_n; ++i) {
+            bool selected = (i == s_selected);
+            ImGui::PushStyleColor(ImGuiCol_Header,
+                ImVec4(0.20f, 0.40f, 0.65f, 1.0f));
+
+            if (ImGui::Selectable(suggestions[i]->c_str(), selected,
+                                  ImGuiSelectableFlags_None)) {
+                strncpy(m_launcher_buf, suggestions[i]->c_str(),
+                        sizeof(m_launcher_buf) - 1);
+                m_launcher_buf[sizeof(m_launcher_buf) - 1] = '\0';
+                enter = true; // clicking a suggestion launches it
             }
+            ImGui::PopStyleColor();
+
+            // Scroll the selected item into view when navigating by keyboard
+            if (selected) ImGui::SetScrollHereY(0.5f);
         }
     }
 
+    // ── Launch ────────────────────────────────────────────────
     if (enter && m_launcher_buf[0] != '\0') {
+        const std::string cmd(m_launcher_buf);
+
         pid_t pid = fork();
         if (pid == 0) {
+            // Child: create new session so the process is detached from
+            // the WM's process group, then exec through the shell.
             setsid();
-            execlp("sh", "sh", "-c", m_launcher_buf, (char*)nullptr);
+            // Close the X display fd so the child doesn't hold it open
+            if (m_dpy) close(ConnectionNumber(m_dpy));
+            execlp("sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
             _exit(1);
+        } else if (pid > 0) {
+            printf("[launcher] Spawned \"%s\" pid=%d\n", cmd.c_str(), pid);
+        } else {
+            perror("[launcher] fork");
         }
-        // Save to history
-        m_launcher_history.push_back(m_launcher_buf);
+
+        // Deduplicate: remove existing entry then push to back so it
+        // becomes the most-recent entry.
+        m_launcher_history.erase(
+            std::remove(m_launcher_history.begin(),
+                        m_launcher_history.end(), cmd),
+            m_launcher_history.end());
+        m_launcher_history.push_back(cmd);
+
+        // Trim history to a sane maximum
+        const size_t MAX_HISTORY = 50;
+        if (m_launcher_history.size() > MAX_HISTORY)
+            m_launcher_history.erase(m_launcher_history.begin(),
+                m_launcher_history.begin() +
+                    (m_launcher_history.size() - MAX_HISTORY));
+
+        // Reset state and close launcher
         memset(m_launcher_buf, 0, sizeof(m_launcher_buf));
+        s_selected    = -1;
+        s_last_query  = "";
+        s_focus_input = true;
         m_show_launcher = false;
     }
 
-    // Escape closes launcher (adjust depending on ImGui version)
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape))
+    // ── Escape closes launcher ────────────────────────────────
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        memset(m_launcher_buf, 0, sizeof(m_launcher_buf));
+        s_selected    = -1;
+        s_last_query  = "";
+        s_focus_input = true;
         m_show_launcher = false;
+    }
 
     ImGui::End();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
 }
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_notifications()
