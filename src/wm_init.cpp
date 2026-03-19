@@ -265,7 +265,7 @@ void ImGuiWM::setup_keybinds()
     });
     grab(Mod1Mask, XK_t, [this]{
         auto& ws = current_ws();
-        ws.layout = Layout::Tiling;
+        ws.layout =  (ws.layout == Layout::Tiling) ? Layout::Floating : Layout::Tiling;
         apply_layout(ws);
     });
     grab(Mod1Mask, XK_r, [this]{
