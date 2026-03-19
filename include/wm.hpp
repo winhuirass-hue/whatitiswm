@@ -2,8 +2,8 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <X11/keysym.h>       
-#include <X11/cursorfont.h>   
+#include <X11/keysym.h>
+#include <X11/cursorfont.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/Xcomposite.h>
 #include <X11/extensions/Xdamage.h>
@@ -18,6 +18,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 #include <unordered_map>
 #include <cstdint>
 #include <functional>
@@ -56,13 +57,16 @@ enum class Layout { Floating, Tiling, Monocle, Ribbon, Split };
 
 // ─────────────────────────────────────────────────────────────
 //  Workspace / virtual desktop
+//
+//  Clients are stored as Window handles (looked up via m_win_index).
+//  This avoids dangling pointers when m_clients (std::list) is mutated.
 // ─────────────────────────────────────────────────────────────
 struct Workspace {
-    int              id     = 0;
-    std::string      name;
-    Layout           layout = Layout::Floating;
-    std::vector<Client*> clients;
-    Client*          focused = nullptr;
+    int                  id     = 0;
+    std::string          name;
+    Layout               layout = Layout::Floating;
+    std::vector<Window>  clients;   // stable Window IDs, not raw Client*
+    Window               focused = 0;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -96,7 +100,7 @@ private:
     void setup_keybinds();
     void setup_ewmh();
 
-   // bool read_motif_hints(Window w, bool& no_decors);
+    bool read_motif_hints(Window w, bool& no_decors);
 
     // ── Event loop ───────────────────────────────────────────
     void process_events();
@@ -159,6 +163,11 @@ private:
     void update_drag(int root_x, int root_y);
     void end_drag();
 
+    // ── Internal helpers ─────────────────────────────────────
+    // Collect non-minimized Client* for a workspace (safe transient use only —
+    // do NOT store these pointers across any call that mutates m_clients).
+    std::vector<Client*> visible_clients(Workspace& ws);
+
 private:
     // X11
     const char*  m_display_name;
@@ -193,9 +202,17 @@ private:
     Atom m_UTF8_STRING = 0;
 
     // State
-    bool         m_running     = false;
-    std::vector<Client>  m_clients;
-    std::unordered_map<Window, size_t> m_win_index; // xwin → index into m_clients
+    bool m_running = false;
+
+    // FIX: std::list gives stable addresses — push_back / erase never
+    // move or reallocate existing nodes, so Client* pointers remain valid
+    // for the entire lifetime of the Client object.
+    std::list<Client> m_clients;
+
+    // Maps Window ID → stable Client* (pointer into m_clients list node).
+    // Safe to store long-term because list nodes are never relocated.
+    std::unordered_map<Window, Client*> m_win_index;
+
     std::vector<Workspace> m_workspaces;
     int          m_current_ws  = 0;
     Client*      m_focused     = nullptr;
