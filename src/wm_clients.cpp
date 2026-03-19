@@ -4,6 +4,7 @@
 
 #include "wm.hpp"
 #include <cstring>
+#include <cstdint>
 #include <cstdio>
 #include <algorithm>
 
