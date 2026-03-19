@@ -28,13 +28,16 @@ Client* ImGuiWM::manage(Window w)
 
     m_win_index[w] = m_clients.size() - 1;
 
+    // ── ЧИТАННЯ Motif hints (CSD/SSD)
     {
-        bool no_decors = false
+        bool no_decors = false;
         if (read_motif_hints(w, no_decors))
             c.has_csd = no_decors;
         else
             c.has_csd = false;
+    }
 
+    // Підписка на події
     XSelectInput(m_dpy, w,
         PropertyChangeMask |
         StructureNotifyMask |
