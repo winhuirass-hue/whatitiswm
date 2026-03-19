@@ -96,7 +96,7 @@ private:
     void setup_keybinds();
     void setup_ewmh();
 
-    bool read_motif_hints(Window w, bool& no_decors);
+   // bool read_motif_hints(Window w, bool& no_decors);
 
     // ── Event loop ───────────────────────────────────────────
     void process_events();
