@@ -218,22 +218,46 @@ void ImGuiWM::render_client_window(Client& c)
         ImGui::Dummy(content_size);
     }
 
-    // Forward right-clicks to the client window
+    // Forward right-clicks to the client window.
+    // We must send both ButtonPress AND ButtonRelease — most toolkits
+    // (GTK, Qt, Electron) open the context menu on release, and will
+    // silently ignore a press with no matching release.
+    // We also focus+raise first so the window is actively listening,
+    // and set Button3Mask in the release state field (button was held).
     if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        focus(&c);
+        raise(&c);
+        XFlush(m_dpy); // flush focus/raise before synthetic events
+
+        const int mx = (int)ImGui::GetMousePos().x;
+        const int my = (int)ImGui::GetMousePos().y;
+        const int wx = mx - c.x;
+        const int wy = my - c.y;
+
         XEvent ev{};
-        ev.type = ButtonPress;
-        ev.xbutton.button = Button3;
-        ev.xbutton.window = c.xwin;
-        ev.xbutton.root   = m_root;
-        ev.xbutton.subwindow = None;
-        ev.xbutton.time   = CurrentTime;
-        ev.xbutton.x      = (int)ImGui::GetMousePos().x - c.x;
-        ev.xbutton.y      = (int)ImGui::GetMousePos().y - c.y;
-        ev.xbutton.x_root = (int)ImGui::GetMousePos().x;
-        ev.xbutton.y_root = (int)ImGui::GetMousePos().y;
-        ev.xbutton.state  = 0;
+        ev.xbutton.display     = m_dpy;
+        ev.xbutton.window      = c.xwin;
+        ev.xbutton.root        = m_root;
+        ev.xbutton.subwindow   = None;
+        ev.xbutton.time        = CurrentTime;
+        ev.xbutton.x           = wx;
+        ev.xbutton.y           = wy;
+        ev.xbutton.x_root      = mx;
+        ev.xbutton.y_root      = my;
+        ev.xbutton.button      = Button3;
         ev.xbutton.same_screen = True;
+
+        // Press (state=0: no buttons held yet)
+        ev.type          = ButtonPress;
+        ev.xbutton.state = 0;
         XSendEvent(m_dpy, c.xwin, True, ButtonPressMask, &ev);
+
+        // Release (state=Button3Mask: button was down during the event)
+        ev.type          = ButtonRelease;
+        ev.xbutton.state = Button3Mask;
+        ev.xbutton.time  = CurrentTime;
+        XSendEvent(m_dpy, c.xwin, True, ButtonReleaseMask, &ev);
+
         XFlush(m_dpy);
     }
 
