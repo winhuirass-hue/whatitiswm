@@ -13,7 +13,8 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>   // FIX: waitpid, WNOHANG
+#include <sys/wait.h>   // waitpid, WNOHANG
+#include <fcntl.h>      // open, O_RDWR
 #include <algorithm>
 
 // ─────────────────────────────────────────────────────────────
@@ -53,7 +54,13 @@ void ImGuiWM::composite_update_texture(Client& c)
 
     if (c.w <= 0 || c.h <= 0) return;
 
-    // Grab window pixels via XGetImage (works everywhere)
+    // Acknowledge the damage region so the server clears its accumulator.
+    // Without this, every pixel change re-fires a damage event immediately,
+    // keeping dirty=true every frame and thrashing XGetImage on any active
+    // window (terminals, browsers, video).
+    if (c.damage)
+        XDamageSubtract(m_dpy, c.damage, None, None);
+
     XImage* img = XGetImage(m_dpy, c.xwin,
                             0, 0, c.w, c.h,
                             AllPlanes, ZPixmap);
@@ -73,7 +80,6 @@ void ImGuiWM::composite_update_texture(Client& c)
     }
     XDestroyImage(img);
 
-    // Create texture on first use
     if (!c.tex) {
         glGenTextures(1, &c.tex);
         glBindTexture(GL_TEXTURE_2D, c.tex);
@@ -81,13 +87,28 @@ void ImGuiWM::composite_update_texture(Client& c)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                     c.w, c.h, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+        c.tex_w = c.w;
+        c.tex_h = c.h;
     } else {
         glBindTexture(GL_TEXTURE_2D, c.tex);
+        if (c.tex_w != c.w || c.tex_h != c.h) {
+            // Window resized — reallocate storage
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+                         c.w, c.h, 0,
+                         GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+            c.tex_w = c.w;
+            c.tex_h = c.h;
+        } else {
+            // Same size — sub-update avoids GPU realloc, ~2x faster
+            glTexSubImage2D(GL_TEXTURE_2D, 0,
+                            0, 0, c.w, c.h,
+                            GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
+        }
     }
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 c.w, c.h, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, buf.data());
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -465,8 +486,20 @@ void ImGuiWM::render_launcher()
         const std::string cmd(m_launcher_buf);
         pid_t pid = fork();
         if (pid == 0) {
+            // New session — detach from WM's process group entirely
             setsid();
+            // Close the X connection fd so child doesn't hold it open
             if (m_dpy) close(ConnectionNumber(m_dpy));
+            // Redirect stdin/stdout/stderr to /dev/null.
+            // Without this the child inherits the WM's fds, so anything
+            // the WM printf()s ends up in the terminal's pty as garbage output.
+            int devnull = open("/dev/null", O_RDWR);
+            if (devnull >= 0) {
+                dup2(devnull, STDIN_FILENO);
+                dup2(devnull, STDOUT_FILENO);
+                dup2(devnull, STDERR_FILENO);
+                if (devnull > STDERR_FILENO) close(devnull);
+            }
             execlp("sh", "sh", "-c", cmd.c_str(), (char*)nullptr);
             _exit(1);
         } else if (pid > 0) {
