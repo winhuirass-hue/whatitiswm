@@ -54,13 +54,9 @@ void ImGuiWM::composite_update_texture(Client& c)
 
     if (c.w <= 0 || c.h <= 0) return;
 
-    // Acknowledge the damage region so the server clears its accumulator.
-    // Without this, every pixel change re-fires a damage event immediately,
-    // keeping dirty=true every frame and thrashing XGetImage on any active
-    // window (terminals, browsers, video).
-    if (c.damage)
-        XDamageSubtract(m_dpy, c.damage, None, None);
-
+    // Note: XDamageSubtract is called in handle_damage_notify() (wm_events.cpp),
+    // not here.  Calling it twice per event would clear the region before the
+    // next real damage arrives, causing missed updates for one frame.
     XImage* img = XGetImage(m_dpy, c.xwin,
                             0, 0, c.w, c.h,
                             AllPlanes, ZPixmap);
