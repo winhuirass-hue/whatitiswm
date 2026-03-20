@@ -570,3 +570,66 @@ std::string ImGuiWM::get_window_title(Window w)
 
     return "<untitled>";
 }
+
+// ─────────────────────────────────────────────────────────────
+// Drag / resize helpers
+// ─────────────────────────────────────────────────────────────
+void ImGuiWM::begin_drag(Client* c, int root_x, int root_y, bool resize)
+{
+    if (!c) return;
+
+    // Promote tiled clients to floating so they detach from the layout
+    // grid before being dragged.  Re-tile the rest so they fill the gap.
+    if (!c->floating) {
+        c->floating = true;
+        apply_layout(current_ws());
+    }
+
+    m_drag.active       = true;
+    m_drag.resize       = resize;
+    m_drag.client       = c;
+    m_drag.start_root_x = root_x;
+    m_drag.start_root_y = root_y;
+    m_drag.start_cx     = c->x;
+    m_drag.start_cy     = c->y;
+    m_drag.start_cw     = c->w;
+    m_drag.start_ch     = c->h;
+
+    focus(c);
+    raise(c);
+}
+
+void ImGuiWM::update_drag(int root_x, int root_y)
+{
+    if (!m_drag.active || !m_drag.client) return;
+
+    Client* c = m_drag.client;
+    int dx = root_x - m_drag.start_root_x;
+    int dy = root_y - m_drag.start_root_y;
+
+    if (m_drag.resize) {
+        c->w = std::max(80, m_drag.start_cw + dx);
+        c->h = std::max(40, m_drag.start_ch + dy);
+    } else {
+        c->x = m_drag.start_cx + dx;
+        c->y = m_drag.start_cy + dy;
+
+        // Keep a sliver of titlebar on screen so user can always grab it back
+        const int TITLEBAR_H = 22;
+        const int MARGIN     = 10;
+        c->x = std::max(MARGIN - c->w + MARGIN, c->x);
+        c->x = std::min(m_sw  - MARGIN,          c->x);
+        c->y = std::max(TITLEBAR_H,               c->y);
+        c->y = std::min(m_sh  - MARGIN,           c->y);
+    }
+
+    XMoveResizeWindow(m_dpy, c->xwin, c->x, c->y, c->w, c->h);
+    c->dirty = true;
+}
+
+void ImGuiWM::end_drag()
+{
+    if (m_drag.client && m_drag.client->maximized)
+        m_drag.client->maximized = false;
+    m_drag = {};
+}
