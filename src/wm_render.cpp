@@ -166,9 +166,29 @@ void ImGuiWM::render_desktop()
 // ─────────────────────────────────────────────────────────────
 void ImGuiWM::render_clients()
 {
-    // FIX: ws.clients holds Window IDs — look up Client* via find_client.
-    // The old  `for (auto* c : current_ws().clients)` tried to iterate
-    // Window (unsigned long) as Client*, causing the deduction error.
+    // Super + left-drag moves any window (CSD or SSD) regardless of where
+    // the cursor sits inside it.  We check this once here, before iterating
+    // over windows, so it also works when the cursor is inside a CSD window
+    // that has no visible titlebar strip we can hit-test.
+    {
+        bool super_held = ImGui::GetIO().KeySuper ||
+                          (ImGui::GetIO().KeyMods & ImGuiMod_Super);
+        bool lmb_down   = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        bool lmb_click  = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        bool lmb_rel    = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
+        ImVec2 mp = ImGui::GetMousePos();
+
+        if (lmb_rel && m_drag.active)
+            end_drag();
+
+        if (super_held && lmb_click && !m_drag.active && m_focused) {
+            // Begin move on focused window
+            begin_drag(m_focused, (int)mp.x, (int)mp.y, /*resize=*/false);
+        }
+        if (m_drag.active && lmb_down)
+            update_drag((int)mp.x, (int)mp.y);
+    }
+
     for (Window cw : current_ws().clients) {
         Client* c = find_client(cw);
         if (!c || c->minimized) continue;
@@ -186,9 +206,16 @@ void ImGuiWM::render_clients()
 void ImGuiWM::render_client_window(Client& c)
 {
     const float TITLEBAR_H = 22.0f;
+    // Resize handle size in the bottom-right corner
+    const float RESIZE_GRIP = 12.0f;
 
-    ImVec2 win_pos  = {(float)c.x, (float)c.y - TITLEBAR_H};
-    ImVec2 win_size = {(float)c.w, (float)c.h + TITLEBAR_H};
+    // For CSD windows (client draws its own decorations) we show no ImGui
+    // titlebar — the window content fills the whole box.  For SSD windows
+    // we prepend our own TITLEBAR_H-tall strip above the content.
+    const float our_tb = c.has_csd ? 0.0f : TITLEBAR_H;
+
+    ImVec2 win_pos  = {(float)c.x, (float)c.y - our_tb};
+    ImVec2 win_size = {(float)c.w, (float)c.h + our_tb};
 
     ImGui::SetNextWindowPos(win_pos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(win_size, ImGuiCond_Always);
@@ -211,16 +238,34 @@ void ImGuiWM::render_client_window(Client& c)
     ImVec2 tl = ImGui::GetWindowPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
-    // Traffic-light buttons
-    ImVec2 close_pos = {tl.x + win_size.x - 16.0f, tl.y + 11.0f};
-    ImVec2 max_pos   = {tl.x + win_size.x - 36.0f, tl.y + 11.0f};
-    ImVec2 min_pos   = {tl.x + win_size.x - 56.0f, tl.y + 11.0f};
+    // ── Titlebar hit regions ──────────────────────────────────
+    // Defined in screen coords.  For CSD windows our_tb==0, so the
+    // titlebar rect has zero height and none of the SSD interactions fire.
+    ImVec2 tb_min = tl;
+    ImVec2 tb_max = {tl.x + win_size.x, tl.y + our_tb};
 
-    dl->AddCircleFilled(close_pos, 7.0f, IM_COL32(220,  70,  70, 255));
-    dl->AddCircleFilled(max_pos,   7.0f, IM_COL32( 70, 180,  70, 255));
-    dl->AddCircleFilled(min_pos,   7.0f, IM_COL32(220, 180,  50, 255));
+    // Traffic-light buttons (SSD only)
+    ImVec2 close_pos = {tb_max.x - 16.0f, tl.y + 11.0f};
+    ImVec2 max_pos   = {tb_max.x - 36.0f, tl.y + 11.0f};
+    ImVec2 min_pos   = {tb_max.x - 56.0f, tl.y + 11.0f};
 
-    // Window content
+    if (!c.has_csd) {
+        dl->AddCircleFilled(close_pos, 7.0f, IM_COL32(220,  70,  70, 255));
+        dl->AddCircleFilled(max_pos,   7.0f, IM_COL32( 70, 180,  70, 255));
+        dl->AddCircleFilled(min_pos,   7.0f, IM_COL32(220, 180,  50, 255));
+    }
+
+    // Resize grip — small triangle in the bottom-right corner, always shown
+    {
+        ImVec2 br = {tl.x + win_size.x, tl.y + win_size.y};
+        dl->AddTriangleFilled(
+            {br.x - RESIZE_GRIP, br.y},
+            {br.x, br.y - RESIZE_GRIP},
+            {br.x, br.y},
+            IM_COL32(120, 120, 160, 100));
+    }
+
+    // ── Window content ────────────────────────────────────────
     ImVec2 content_size = {(float)c.w, (float)c.h};
     ImGui::BeginChild("##client_area", content_size, false,
                       ImGuiWindowFlags_NoDecoration |
@@ -239,21 +284,14 @@ void ImGuiWM::render_client_window(Client& c)
         ImGui::Dummy(content_size);
     }
 
-    // Forward right-clicks to the client window.
-    // We must send both ButtonPress AND ButtonRelease — most toolkits
-    // (GTK, Qt, Electron) open the context menu on release, and will
-    // silently ignore a press with no matching release.
-    // We also focus+raise first so the window is actively listening,
-    // and set Button3Mask in the release state field (button was held).
+    // Forward right-clicks to the client window (press + release pair)
     if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
         focus(&c);
         raise(&c);
-        XFlush(m_dpy); // flush focus/raise before synthetic events
+        XFlush(m_dpy);
 
         const int mx = (int)ImGui::GetMousePos().x;
         const int my = (int)ImGui::GetMousePos().y;
-        const int wx = mx - c.x;
-        const int wy = my - c.y;
 
         XEvent ev{};
         ev.xbutton.display     = m_dpy;
@@ -261,47 +299,97 @@ void ImGuiWM::render_client_window(Client& c)
         ev.xbutton.root        = m_root;
         ev.xbutton.subwindow   = None;
         ev.xbutton.time        = CurrentTime;
-        ev.xbutton.x           = wx;
-        ev.xbutton.y           = wy;
+        ev.xbutton.x           = mx - c.x;
+        ev.xbutton.y           = my - c.y;
         ev.xbutton.x_root      = mx;
         ev.xbutton.y_root      = my;
         ev.xbutton.button      = Button3;
         ev.xbutton.same_screen = True;
-
-        // Press (state=0: no buttons held yet)
         ev.type          = ButtonPress;
         ev.xbutton.state = 0;
         XSendEvent(m_dpy, c.xwin, True, ButtonPressMask, &ev);
-
-        // Release (state=Button3Mask: button was down during the event)
         ev.type          = ButtonRelease;
         ev.xbutton.state = Button3Mask;
         ev.xbutton.time  = CurrentTime;
         XSendEvent(m_dpy, c.xwin, True, ButtonReleaseMask, &ev);
-
         XFlush(m_dpy);
     }
 
     ImGui::EndChild();
 
-    // Focus / raise on left-click anywhere in the window
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
-        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            focus(&c);
-            raise(&c);
-        }
-    }
+    // ── Mouse interactions ────────────────────────────────────
+    ImVec2 mp  = ImGui::GetMousePos();
+    bool   lmb = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+    bool   lmb_down = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+    bool   lmb_rel  = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
 
-    // Traffic-light click detection
-    ImVec2 mp = ImGui::GetMousePos();
     auto in_circle = [](ImVec2 p, ImVec2 centre, float r) {
         float dx = p.x - centre.x, dy = p.y - centre.y;
         return dx*dx + dy*dy <= r*r;
     };
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+    auto in_rect = [](ImVec2 p, ImVec2 rmin, ImVec2 rmax) {
+        return p.x >= rmin.x && p.x <= rmax.x &&
+               p.y >= rmin.y && p.y <= rmax.y;
+    };
+
+    // Resize grip rect (bottom-right corner)
+    ImVec2 br     = {tl.x + win_size.x, tl.y + win_size.y};
+    ImVec2 rg_min = {br.x - RESIZE_GRIP * 2, br.y - RESIZE_GRIP * 2};
+    bool   on_grip = in_rect(mp, rg_min, br);
+
+    // Set cursor shape to hint resize / move
+    if (on_grip)
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNWSE);
+    else if (in_rect(mp, tb_min, tb_max) && !c.has_csd)
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+    if (lmb_rel && m_drag.active)
+        end_drag();
+
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)) {
+        // Focus + raise on any left click
+        if (lmb) { focus(&c); raise(&c); }
+
+        if (!m_drag.active) {
+            // ── Start resize (bottom-right grip) ─────────────
+            if (lmb && on_grip) {
+                begin_drag(&c, (int)mp.x, (int)mp.y, /*resize=*/true);
+            }
+            // ── Start move (titlebar drag, SSD) ──────────────
+            else if (lmb && !c.has_csd && in_rect(mp, tb_min, tb_max)
+                     && !in_circle(mp, close_pos, 9.0f)
+                     && !in_circle(mp, max_pos,   9.0f)
+                     && !in_circle(mp, min_pos,   9.0f))
+            {
+                begin_drag(&c, (int)mp.x, (int)mp.y, /*resize=*/false);
+            }
+            // ── Start move (CSD titlebar: Super + left drag) ─
+            // CSD windows draw their own titlebar so we can't hit-test it.
+            // Convention: Super + drag moves the window regardless of where
+            // the cursor is inside it, matching most compositor behaviour.
+        }
+    }
+
+    // Continue drag even if cursor leaves the window this frame
+    if (m_drag.active && m_drag.client == &c) {
+        if (lmb_down)
+            update_drag((int)mp.x, (int)mp.y);
+        else
+            end_drag();
+    }
+
+    // ── SSD traffic-light clicks ──────────────────────────────
+    if (!c.has_csd && lmb) {
         if      (in_circle(mp, close_pos, 7.0f)) kill_focused();
         else if (in_circle(mp, max_pos,   7.0f)) toggle_maximize(&c);
         else if (in_circle(mp, min_pos,   7.0f)) toggle_minimize(&c);
+    }
+
+    // ── Double-click titlebar to maximize / restore ───────────
+    if (!c.has_csd && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)
+        && in_rect(mp, tb_min, tb_max))
+    {
+        toggle_maximize(&c);
     }
 
     ImGui::End();
