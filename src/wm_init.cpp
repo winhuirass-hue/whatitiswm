@@ -202,7 +202,7 @@ bool ImGuiWM::setup_imgui()
     ImFontConfig fcfg;
     fcfg.OversampleH = 3;
     io.Fonts->AddFontDefault(&fcfg);
-    ImGui_ImplOpenGL3_CreateFontsTexture();
+    ImGui_ImplOpenGL3_UpdateTexture;
 
     return true;
 }
